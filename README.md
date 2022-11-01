@@ -8,7 +8,7 @@ Four datasets to play with for a hackathon to practice skills learnt at the Deak
 
 
 
-DATASET 1: homerange size of red fox
+### DATASET 1: homerange size of red fox
 
   source: Main et al 2020 (https://doi.org/10.1111/ddi.13115)
 
@@ -30,7 +30,7 @@ DATASET 1: homerange size of red fox
 
 
 
-DATASET 2: Birds distributions in South-East Canada
+### DATASET 2: Bird distributions in South-East Canada
 
   source: Elith et al 2020 (https://doi.org/10.17161/bi.v15i2.13384)
   
@@ -50,7 +50,7 @@ DATASET 2: Birds distributions in South-East Canada
 
 
 
-DATASET 3: Phylogenetic signal on birds susceptibility to avian influenza in Australia
+### DATASET 3: Phylogenetic signal on birds susceptibility to avian influenza in Australia
 
   source: Wille et al preprint (https://doi.org/10.1101/2022.02.14.480463)
   
@@ -62,10 +62,8 @@ DATASET 3: Phylogenetic signal on birds susceptibility to avian influenza in Aus
 
     c) "phylogeneticTree_allSpecies.nwk" phylogenetic tree
     
-    c) "Dataset3_AvianInfluenza.R" code to read it, clean it and a couple of data explorations
+    d) "Dataset3_AvianInfluenza.R" code to read it, clean it and a couple of data explorations
     
-    d) "birddata_clean.csv" model ready version of the dataset 
-
     e) "AIVOzGLMPhylo20220120.Rmd" original code to run the analyses in Wille et al preprint
   
   Suggested analysis: Bernoulli (logit) regression for A
