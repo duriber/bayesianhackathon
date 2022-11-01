@@ -1,0 +1,341 @@
+---
+title: "AIVOzGLMPhylo20210407"
+author: "Marcel Klaassen"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    number_sections: true
+    code_folding: hide
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+---
+
+
+
+```{r setup, include=FALSE, echo=TRUE, results="hide", error=FALSE}
+### a command to clear the memory of R; just in case something in the memory messes up things
+rm(list = ls(all.names = TRUE))
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#the access file name
+db.name <- "C:/Users/marcelk/OneDrive - Deakin University/Klaassen-Lab/Database/AccessDB/birddata01JAN2021.accdb"  #laptop
+db.name <- "E:/OneDrive - Deakin University/Klaassen-Lab/Database/AccessDB/birddata01JAN2021.accdb"                #desktop home
+
+
+#setwd("C:/Users/test/Downloads/Michelle")  #MK for Marcel's laptop
+#setwd("C:/Users/willem/Desktop/aRg")
+try(setwd("E:/OneDrive - Deakin University/Active projects/Australian Duck Prevalence Paper"), silent=TRUE)  #for marcel's desktop
+try(setwd("D:/UserData/marcelk/OneDrive - Deakin University/Active projects/Australian Duck Prevalence Paper"), silent=TRUE) #for Marcel's work PC
+try(setwd("C:/Users/marcelk/OneDrive - Deakin University/Active projects/Australian Duck Prevalence Paper"), silent=TRUE) #for Marcel's work PC
+
+#library(doBy)
+library(ggplot2)
+library(dplyr)
+#library(Hmisc)
+library(reshape2)
+library(cowplot)
+library(MASS)
+library(ape)
+library(phytools)
+#library(MCMCglmm)
+library(coda)
+library(lme4)
+library(multcomp)
+library(brms)
+library(lubridate)
+#library(RMySQL)
+#library(RODBC)
+library(stringr)
+library(kableExtra) # to make nice tables
+library(jtools) #making nice tables of model output using summ
+library(MuMIn) #for dredging
+library(tidyr)
+library(zoo) #rolling mean
+
+# function to check that a variable doesn't match any non-number
+numbers_only <- function(x) !grepl("\\D", x)
+
+
+```
+
+
+# Intro
+
+We read the data generated in AIVOzGLM20210407.Rmd
+
+
+```{r write the data, eval=TRUE, include=TRUE, echo=TRUE, results="hide"}
+
+#Some code in case you want to save/retrieve interim data
+
+Y <- read.csv("birddata.csv",na.strings=c("", "NA"), header=TRUE,sep=",", stringsAsFactors = FALSE)
+Y$X <- NULL
+Y$group <- as.factor(Y$group)
+
+```
+
+
+
+
+# Phylogenetic trees
+
+We read the phylogentic tree. This actually consists of 101 possible trees, which we average. 
+next we clean the tree from species that are not present in the data and make the tip names identical to the names used in the data set.
+
+
+
+```{r phylotree, echo=TRUE, include=TRUE, out.width='\\textwidth', results="hide", warning=FALSE, fig.show="asis", fig.height=8}
+
+
+# **************************************************************************
+############################read the tree and manipulate it for brms
+# **************************************************************************
+
+
+## TREE for all species
+av.host.tree<-read.tree('all_species_rag_cytb_coi_nadh__at_least_60__gaps_stripped__phy_phyml_tree_20210616.nwk')
+
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Anas_castanea_CytB_NADH")] <- "Chestnut teal"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Anas_gracilis_CytB_COI_NADH")] <- 'Grey teal'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Anas_superciliosa_CytB_COI_NADH")] <- "Pacific black duck"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Ardenna_Puffinus_tenuirostris_CytB_COI_NADH")] <- "Short-tailed shearwater"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Arenaria_interpres_RAG1_CytB_COI_NADH")] <- 'Ruddy turnstone'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Aythya_australis_CytB_COI_NADH")] <- "Hardhead"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Calidris_acuminata_RAG1_CytB_COI_NADH")] <- 'Sharp-tailed sandpiper'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Calidris_alba_RAG1_CytB_COI_NADH")] <- 'Sanderling'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Calidris_canutus_RAG1_CytB_COI_NADH")] <- 'Red knot'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Calidris_ferruginea_RAG1_CytB_COI_NADH")] <- 'Curlew sandpiper'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Calidris_ruficollis_RAG1_CytB_COI_NADH")] <- 'Red-necked stint'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Calidris_tenuirostris_RAG1_CytB_COI_NADH")] <- 'Great knot'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Charadrius_leschenaultii_RAG1_CytB_COI_NADH")] <- 'Greater sandplover'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Chenonetta_jubata_CytB_COI_NADH")] <- "Wood duck"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Chlidonias_hybridus_CytB_COI_NADH")] <- "Whiskered tern"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Fulica_atra_CytB_COI_NADH")] <- "Common coot"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Gallinula_Tribonyx_ventralis_RAG_CytB_COI")] <- "Black-tailed nativehen"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Geopelia_cuneata_CytB_COI_NADH")] <- "Diamond dove"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Haematopus_longirostris_RAG1_CytB_COI_NADH")] <- 'Pied oystercatcher'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Heteroscelus_Tringa_brevipes_RAG1_CytB_COI_NADH")] <- 'Grey-tailed tattler'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Larus_novaehollandiae_CytB_COI_NADH")] <- "Silver gull"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Limosa_lapponica_RAG1_CytB_COI_NADH")] <- 'Bar-tailed godwit'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Malacorhynchus_membranaceus_CytB_NADH")] <- 'Pink-eared duck'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Melopsittacus_undulatus_RAG_CytB_COI_NADH")] <- "Budgerigar"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Recurvirostra_novaehollandiae_RAG1_CytB_COI_NADH")] <- 'Red-necked avocet'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Tadorna_tadornoides_CytB_COI_NADH")] <- 'Australian shelduck'
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Taeniopygia_guttata_CytB_COI_NADH")] <- "Zebra finch"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Thalasseus_bergii__CytB_COI_NADH")] <- "Crested tern"
+av.host.tree$tip.label[which(av.host.tree$tip.label=="Xenus_cinereus_RAG_CytB_COI_NADH")] <- 'Terek sandpiper'
+
+print(av.host.tree)
+
+#plot it
+par(mfrow=c(1,1))
+plot(unroot(av.host.tree),type="unrooted",no.margin=TRUE,lab4ut="axial",edge.width=2)
+plotTree(av.host.tree, type="fan", fsize=0.7,lwd=1, ftype="i")
+plotTree(av.host.tree, node.numbers=T, offset=1)
+
+new.tree <- root(av.host.tree, node=36)
+plotTree(new.tree, offset=1)
+
+#Create phylogenetic matrix for random phylogeny term
+phylo.A<-vcv(as.phylo(av.host.tree))
+
+#Retain tree tips for ducks
+red.av.host.tree<-keep.tip(av.host.tree,c('Australian shelduck','Grey teal','Pink-eared duck',"Chestnut teal","Pacific black duck","Wood duck"))
+phylo.D<-vcv(as.phylo(red.av.host.tree))
+
+#Retain tree tips for Scolopacidae
+red.av.host.tree<-keep.tip(av.host.tree,c('Bar-tailed godwit','Curlew sandpiper','Red-necked stint','Red knot',
+                                          'Ruddy turnstone','Sanderling','Sharp-tailed sandpiper','Terek sandpiper',
+                                          'Grey-tailed tattler', "Great knot"))
+phylo.S<-vcv(as.phylo(red.av.host.tree))
+
+
+
+#To assure for this we add a very small value to the diagonal (following https://discourse.mc-stan.org/t/positive-definite-vs-positive-semidefinite-required-for-phylogenetic-regression-error-message-in-brms/17049)
+diag(phylo.A) <- diag(phylo.A) + 0.00000002
+diag(phylo.D) <- diag(phylo.D) + 0.00000002
+diag(phylo.S) <- diag(phylo.S) + 0.00000002
+
+TreeList <- colnames(phylo.A)
+
+AllList <- unique(Y$CatSpeSpeciesRef[which(!is.na(Y$group))])
+
+DropList <- AllList[!AllList %in% TreeList]
+
+```
+
+# pruning the data
+
+The phylogenetic trees have fewer species:
+
+`r TreeList`
+
+than the data:
+
+`r AllList`
+
+We thus omit species that are not in the phylogenetic trees:
+
+`r DropList`
+
+
+```{r prune data}
+
+Y <- Y[which(Y$CatSpeSpeciesRef %in% TreeList),]
+
+```
+
+
+
+# The GLMphylo using brms
+
+
+Some good websites:
+https://cran.r-project.org/web/packages/brms/vignettes/brms_phylogenetics.html
+
+
+For both shorebirds and ducks we run a full model (AIV ~ Age + Season + Year2 + Ecotype, random= ~Species) for both AIV and AIVAb; i.e. 4 models in total.
+
+
+
+**NOTE:** *Instead of AIV and AIVAb we use DepAI in the figures and formulas below; carefully look at the header for each model run to see whether DepAI relates to AIV or AIVAb prevalence (the header also informs whether the analysis is relating to Ducks or Shorebirds !!!!!!!!!!!!!!!!!*
+
+
+
+The variables phylo and species are identical as they are both identifiers of the species. However, we model the phylogenetic covariance only for phylo and thus the species variable accounts for any specific effect that would be independent of the phylogenetic relationship between species (e.g., environmental or niche effects). 
+
+Thus, in short:
+
+phylo = phylogeny/genetics
+
+species = ecology
+
+Before presenting the results We do some diagnostics on how the model fits the data.
+
+First, we plot traces of parameter estimates (should look like growing grass or fluffy caterpillars and well mixing chains).
+
+Next, we plot the "scale reduction factors" or rhat. When close to 1, the better the convergence of our chains. In practice, values below 1.1 can be acceptable and values below 1.02 are good.
+
+
+Finally we will produce an overview of the parameter estimates.
+
+
+```{r run brm models, eval=TRUE, echo=TRUE, include=TRUE, out.width='\\textwidth', warning=FALSE, fig.show="asis", render = 'normal_print'}
+
+`%nin%` = Negate(`%in%`)
+
+DepVar <- c(10,11) #"AIV","AIVAb"
+
+
+for (gg in 1:3) {
+ if (gg==1){g <- "All"; phylo.T <-phylo.A}
+ if (gg==2){g <- "Duck"; phylo.T <-phylo.D}
+ if (gg==3){g <- "Shorebird"; phylo.T <-phylo.S}
+ for (d in DepVar) {
+  for (modelnum in 1:10) { 
+   #for testing
+   #d<- 10
+   #g <- "Duck"
+   if(g=="Shorebird" & d==10) {eqA <- "DepAI ~ Age + Season + Ecotype "} else {eqA <- "DepAI ~ Age + Year2 + Season + Ecotype "}
+   if (modelnum==1){eqB <- paste0("DepAI ~ 1")}
+   if (modelnum==2){eqB <- paste0("DepAI ~ 1 + (1|gr(phylo, cov = A)) + (1|species)")}
+   if (modelnum==3){eqB <- paste0(eqA,"+ (1|gr(phylo, cov = A)) + (1|species)")}
+   if (modelnum==4){eqB <- paste0(eqA,"+ (1|gr(phylo, cov = A))")}
+   if (modelnum==5){eqB <- paste0(eqA,"+ (1|species)")}
+   if (modelnum==6){eqB <- paste0(eqA,"")}
+   if (modelnum==7 & g=="All" & d==10){eqB <- "DepAI ~ Age + Year2 + Season + (1|gr(phylo, cov = A)) + (1|species)"}
+   if (modelnum==7 & g=="All" & d==11){eqB <- "DepAI ~ Age + Year2 + Season + Ecotype + (1|gr(phylo, cov = A)) + (1|species)"}
+   if (modelnum==7 & g=="Duck" & d==10){eqB <- "DepAI ~ Ecotype + Year2 + (1|gr(phylo, cov = A)) + (1|species)"}
+   if (modelnum==7 & g=="Duck" & d==11){eqB <- "DepAI ~ Year2 + (1|gr(phylo, cov = A)) + (1|species)"} 
+   if (modelnum==7 & g=="Shorebird" & d==10){eqB <- "DepAI ~ Age + Season + (1|gr(phylo, cov = A)) + (1|species)"}
+   if (modelnum==7 & g=="Shorebird" & d==11){eqB <- "DepAI ~ Age + Year2 + Season + (1|gr(phylo, cov = A)) + (1|species)"}
+   if (modelnum==8 & g=="All" & d==10){eqB <- "DepAI ~ Age + Year2 + Season + (1|species)"} 
+   if (modelnum==8 & g=="All" & d==11){eqB <- "DepAI ~ Age + Year2 + Season + Ecotype + (1|species)"}   
+   if (modelnum==8 & g=="Duck" & d==10){eqB <- "DepAI ~ Ecotype + Year2 + (1|species)"}
+   if (modelnum==8 & g=="Duck" & d==11){eqB <- "DepAI ~ Year2 + (1|species)"} 
+   if (modelnum==8 & g=="Shorebird" & d==10){eqB <- "DepAI ~ Age + Season + (1|species)"}
+   if (modelnum==8 & g=="Shorebird" & d==11){eqB <- "DepAI ~ Age + Year2 + Season + (1|species)"}
+   if (modelnum==9 & g=="All" & d==10){eqB <- "DepAI ~ Age + Year2 + Season + (1|gr(phylo, cov = A))"}
+   if (modelnum==9 & g=="All" & d==11){eqB <- "DepAI ~ Age + Year2 + Season + Ecotype + (1|gr(phylo, cov = A))"}  
+   if (modelnum==9 & g=="Duck" & d==10){eqB <- "DepAI ~ Ecotype + Year2 + (1|gr(phylo, cov = A))"}
+   if (modelnum==9 & g=="Duck" & d==11){eqB <- "DepAI ~ Year2 + (1|gr(phylo, cov = A))"} 
+   if (modelnum==9 & g=="Shorebird" & d==10){eqB <- "DepAI ~ Age + Season + (1|gr(phylo, cov = A))"}
+   if (modelnum==9 & g=="Shorebird" & d==11){eqB <- "DepAI ~ Age + Year2 + Season + (1|gr(phylo, cov = A))"}
+   if (modelnum==10 & g=="All" & d==10){eqB <- "DepAI ~ Age + Year2 + Season"} 
+   if (modelnum==10 & g=="All" & d==11){eqB <- "DepAI ~ Age + Year2 + Season +Ecotype"}   
+   if (modelnum==10 & g=="Duck" & d==10){eqB <- "DepAI ~ Ecotype + Year2"}
+   if (modelnum==10 & g=="Duck" & d==11){eqB <- "DepAI ~ Year2"} 
+   if (modelnum==10 & g=="Shorebird" & d==10){eqB <- "DepAI ~ Age + Season"}
+   if (modelnum==10 & g=="Shorebird" & d==11){eqB <- "DepAI ~ Age + Year2 + Season"}  
+    
+   if (gg==1){J <- subset(Y, select = c(d,1,5,18,19,20))}
+   if (gg==2){J <- subset(Y[which(Y$group==g),], select = c(d,1,5,18,19,20))} 
+   if (gg==3){J <- subset(Y[which(Y$CatSpeSpeciesRef %in% c('Bar-tailed godwit','Curlew sandpiper','Red-necked stint','Red knot',
+                                          'Ruddy turnstone','Sanderling','Sharp-tailed sandpiper','Terek sandpiper',
+                                          'Grey-tailed tattler', "Great knot")),], select=c(d,1,5,18,19,20))}
+   J <- J[complete.cases(J),]
+   J$species <- J$CatSpeSpeciesRef
+   J$CatSpeSpeciesRef <- NULL
+   J$Year2 <- as.factor(J$Year2)
+   cat(paste(" \n  \n  \n", " *** main effects only for", colnames(J[1]), " in ",g,"-",modelnum, "  \n   \n"))
+    
+   if (!file.exists(paste("pglm4",g,d,modelnum,".RData",sep=""))){
+    J$phylo <- J$species  #we make a dummy variable
+    J$DepAI <- J[,1]  #we make the dependent variable (either AIV or AIVAb)
+    
+    skipYEARS <- ifelse(g %in% c("Duck","All") & d==10, c("2020"), c("2022")) #removing 2020 from Duck and All AIV analysis
+
+    #set the random generator  
+    set.seed(1)
+
+    PGLM <- brm(formula(eqB), 
+                         chains = 4,
+                         cores = 4,
+                         family = bernoulli(link="logit"), 
+                         #iter = 1000,warmup = 500, thin = 1, 
+                         iter = 10000,warmup = 5000, thin = 5,  #for better convergence
+                         control=list(adapt_delta=0.8),
+                         #control=list(adapt_delta=0.999),       #for better convergence
+                         data=J[which(J$Year2 %nin% skipYEARS),],
+                         data2= list(A = phylo.T))
+    save(PGLM, file=paste("pglm4",g,d,modelnum,".RData",sep="")) 
+    #plot(PGLM, N=4, ask= FALSE)
+    }
+   #plot traces of parameter estimates (should look like growing grass and well mixing chains)
+   
+  
+   #show model outcomes #provide an overview of parameter estimates
+   #print(summary(PGLM))
+  
+   #The closer the "scale reduction factor" is to 1, the better the convergence of our chains. 
+   #In practice, values below 1.1 can be acceptable and values below 1.02 are good.
+ 
+   #plot(conditional_effects(PGLM), points = FALSE, ask=FALSE)
+  }
+ }
+}
+```
+
+
+
+# Tentative conclusions
+
+Excellent fits for most parameters (most Rhats < 1.02) except for AIV in shorebirds
+
+
+AIV ducks: phylo, species, year, ecotype (T>A) significant. A suggestive positive relationship between rainfall and AIV
+
+AIVAb ducks: phylo, species, year significant. The year effect is opposite to what we found in AIV!
+
+AIV shorebirds: very poor fit. Maybe we should omit year from the model, but tentatively phylo, species, age (J>A), Season (W>S) and Ecotype (Temp>Trop) significant
+
+AIVAb shorebirds: phylo, species, age (J<A), year, season (W>S) significant.
+
+
+**NOTE:**
+
+There are some striking (negative) relationships between AIV and AIVAb prevalence that may actually relate to the amount of juvs in host populations: many juvs -> high AIV -> low AIVAb (see e.g. duck effect plots of Year2)
+
