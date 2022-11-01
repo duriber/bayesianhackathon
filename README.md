@@ -50,7 +50,7 @@ DATASET 2: Birds distributions in South-East Canada
 
 
 
-DATASET 3: Phyllogenetic signal on birds susceptibility to avian influenza in Australia
+DATASET 3: Phylogenetic signal on birds susceptibility to avian influenza in Australia
 
   source: Wille et al preprint (https://doi.org/10.1101/2022.02.14.480463)
   
