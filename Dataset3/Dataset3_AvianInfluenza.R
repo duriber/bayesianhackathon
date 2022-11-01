@@ -102,6 +102,6 @@ summary(bayes_simplemodel)
 # estimation for the phylogenetically weighted formula under the Bayesian approach
 bayes_phylomodel <- brm(RandomInterceptsPhyl_form, 
                          data = simplified_data,
-                         data2 = phylo.A, # covariance matrix from phylogenetic distances
+                         data2 = list(phylo.A = phylo.A), # covariance matrix from phylogenetic distances
                          cores = 4) # parallel run
 summary(bayes_phylomodel)
