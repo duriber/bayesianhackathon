@@ -65,6 +65,8 @@ DATASET 3: Phyllogenetic signal on birds susceptibility to avian influenza in Au
     c) "Dataset3_AvianInfluenza.R" code to read it, clean it and a couple of data explorations
     
     d) "birddata_clean.csv" model ready version of the dataset 
+
+    e) "AIVOzGLMPhylo20220120.Rmd" original code to run the analyses in Wille et al preprint
   
   Suggested analysis: Bernoulli (logit) regression for A
   
