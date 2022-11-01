@@ -40,7 +40,7 @@ DATASET 2: Birds distributions in South-East Canada
     
     b) "Elith et al_BI_2020.pdf" Original paper published in Biodiv. Informatics
     
-    c) "rasters_Can.zip" compressed file with the original rasters of the environmental predictors
+    c) "rasters_Can.zip" compressed file with the original rasters of the environmental predictors (note that altitude was not included as raster but it still is present in the extracted values)
     
   
   Suggested analysis: Bernoulli (logit) regression
